@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>2-Wheel Arena Car Simulator (4ft × 4ft)</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      background-color: #14171c;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header Bar */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 20px;
+      background-color: #0d1015;
+      border-bottom: 1px solid #262c36;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fbbf24;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 2px 0 0 0;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #334155;
+      background-color: #1e242d;
+      color: #e2e8f0;
+      transition: background-color 0.15s ease, transform 0.08s ease;
+    }
+
+    .btn-pill:hover {
+      background-color: #28303d;
+    }
+
+    .btn-pill:active {
+      transform: translateY(1px);
+    }
+
+    .btn-pill.bot-on {
+      border-color: rgba(245, 158, 11, 0.5);
+      background-color: rgba(245, 158, 11, 0.14);
+      color: #fcd34d;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #64748b;
+    }
+
+    .bot-on .status-dot {
+      background-color: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+    }
+
+    /* Main Workspace */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 18px 20px;
+      max-width: 1220px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Arena Stage */
+    .arena-column {
+      flex: 1 1 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 300px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .canvas-shell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      min-height: 320px;
+      background-color: #0d1015;
+      border: 1px solid #2b323e;
+      border-radius: 16px;
+      padding: 6px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    }
+
+    canvas#arenaCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      background-color: #d6ba94;
+      touch-action: none;
+    }
+
+    /* Pit Fall Modal Overlay */
+    .pit-overlay {
+      position: absolute;
+      inset: 6px;
+      border-radius: 12px;
+      background: rgba(13, 16, 21, 0.88);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 20;
+    }
+
+    .pit-overlay.hidden {
+      display: none;
+    }
+
+    .pit-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(244, 63, 94, 0.18);
+      border: 1px solid rgba(244, 63, 94, 0.45);
+      color: #fb7185;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .pit-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 6px 0;
+    }
+
+    .pit-desc {
+      font-size: 13px;
+      color: #cbd5e1;
+      max-width: 280px;
+      margin: 0 0 18px 0;
+      line-height: 1.45;
+    }
+
+    .btn-respawn {
+      padding: 11px 20px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(180deg, #fbbf24, #d97706);
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-respawn:hover {
+      filter: brightness(1.06);
+    }
+
+    .hint-bar {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #1e242d;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      color: #e2e8f0;
+    }
+
+    /* Controls Sidebar */
+    .controls-column {
+      flex: 1 1 340px;
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-card {
+      background-color: #0d1015;
+      border: 1px solid #262c36;
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .panel-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+    }
+
+    .badge-status {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background-color: #1e242d;
+      border: 1px solid #334155;
+      color: #fbbf24;
+    }
+
+    /* D-Pad Grid */
+    .dpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 290px;
+      margin: 4px auto;
+    }
+
+    .drive-btn {
+      height: 64px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #090d16;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.07s ease, filter 0.1s ease;
+    }
+
+    .drive-btn:active,
+    .drive-btn.active-key {
+      transform: translateY(2px) scale(0.96);
+      filter: brightness(1.12);
+    }
+
+    .btn-front {
+      background: linear-gradient(180deg, #34d399, #059669);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-back {
+      background: linear-gradient(180deg, #fbbf24, #d97706);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.25);
+    }
+
+    .btn-turn {
+      background: linear-gradient(180deg, #38bdf8, #0284c7);
+      box-shadow: 0 6px 16px rgba(14, 165, 233, 0.25);
+    }
+
+    .btn-paddle {
+      background: linear-gradient(180deg, #f43f5e, #be123c);
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(244, 63, 94, 0.25);
+    }
+
+    .btn-unstick {
+      background: linear-gradient(180deg, #a78bfa, #7c3aed);
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.25);
+    }
+
+    .control-note {
+      font-size: 11.5px;
+      color: #94a3b8;
+      text-align: center;
+      margin: 12px 0 0 0;
+      line-height: 1.4;
+    }
+
+    /* Sliders */
+    .slider-group {
+      margin-bottom: 14px;
+    }
+
+    .slider-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      margin-bottom: 6px;
+    }
+
+    .slider-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 700;
+      color: #fbbf24;
+    }
+
+    .slider-val.sky {
+      color: #38bdf8;
+    }
+
+    .slider-val.emerald {
+      color: #34d399;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #1e242d;
+      outline: none;
+      cursor: pointer;
+      accent-color: #f59e0b;
+    }
+
+    input[type="range"].sky-slider {
+      accent-color: #38bdf8;
+    }
+
+    input[type="range"].emerald-slider {
+      accent-color: #34d399;
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #fbbf24;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    /* Telemetry Grid */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+
+    .tele-box {
+      background-color: #141820;
+      border: 1px solid #242b36;
+      border-radius: 10px;
+      padding: 8px 6px;
+    }
+
+    .tele-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 3px;
+    }
+
+    .tele-num {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .tele-unit {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 1px;
+    }
+
+    /* Wheel RPM Bars */
+    .rpm-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .rpm-item {
+      background: #141820;
+      border: 1px solid #242b36;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+    .rpm-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .rpm-track {
+      width: 100%;
+      height: 5px;
+      background: #090d16;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .rpm-fill {
+      height: 100%;
+      width: 0%;
+      background: #34d399;
+      transition: width 0.06s linear;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="5" y="7" width="14" height="10" rx="2" />
+          <rect x="1.5" y="6" width="3" height="12" rx="1" fill="currentColor" />
+          <rect x="19.5" y="6" width="3" height="12" rx="1" fill="currentColor" />
+          <path d="M12 7V3" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">2-Wheel Arena Car Simulator</h1>
+        <p class="brand-sub">Appendix 1 Layout • 4 ft × 4 ft (1219 mm) • Wide-Track Differential Drive</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="toggleBotBtn" class="btn-pill bot-on" type="button">
+        <span class="status-dot"></span>
+        <span id="toggleBotLabel">Sparring Bot: ON</span>
+      </button>
+      <button id="headerResetBtn" class="btn-pill" type="button">
+        Reset Arena
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="workspace">
+
+    <!-- Left: Interactive 4ft x 4ft Arena Canvas -->
+    <div class="arena-column">
+      <div class="canvas-shell" id="canvasContainer">
+        <canvas id="arenaCanvas" width="600" height="600"></canvas>
+
+        <!-- Pit Fall Modal -->
+        <div id="pitOverlay" class="pit-overlay hidden">
+          <div class="pit-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+            </svg>
+          </div>
+          <h2 class="pit-title">Fell into the center hole!</h2>
+          <p class="pit-desc">
+            Your wide-track 2-wheel car tipped over the 250 mm × 250 mm center pit edge.
+          </p>
+          <button id="overlayResetBtn" class="btn-respawn" type="button">
+            Respawn Car in Safe Corner
+          </button>
+        </div>
+      </div>
+
+      <div class="hint-bar">
+        Use <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd> to drive, <kbd>Space</kbd> to swing servo paddle, or hold the buttons.
+      </div>
+    </div>
+
+    <!-- Right: Drive Controls, Calibration & Telemetry -->
+    <div class="controls-column">
+
+      <!-- Drive Pad -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <span class="panel-label">Drive Controls</span>
+          <span id="activeActionBadge" class="badge-status">READY</span>
+        </div>
+
+        <div class="dpad-grid">
+          <button id="btnUnstick" class="drive-btn btn-unstick" type="button" aria-label="Unstick From Wall">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span>Unstick</span>
+          </button>
+          <button id="btnFront" class="drive-btn btn-front" type="button" aria-label="Drive Front">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+            <span>Front</span>
+          </button>
+          <button id="btnPaddle" class="drive-btn btn-paddle" type="button" aria-label="Swing Paddle">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span>Paddle</span>
+          </button>
+
+          <button id="btnLeft" class="drive-btn btn-turn" type="button" aria-label="Quick Turn Left">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Left</span>
+          </button>
+
+          <button id="btnBack" class="drive-btn btn-back" type="button" aria-label="Drive Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span>Back</span>
+          </button>
+
+          <button id="btnRight" class="drive-btn btn-turn" type="button" aria-label="Quick Turn Right">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Right</span>
+          </button>
+        </div>
+
+        <p class="control-note">
+          Only the first pressed control registers at a time. Hitting a wall pins the car—click <strong>Unstick</strong> (or press <kbd>U</kbd>) to free it.
+        </p>
+      </section>
+
+      <!-- Physics Tuning -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <span class="panel-label">2-Wheel Motor Calibration</span>
+          <button id="resetCalibrationBtn" class="link-btn" type="button">Reset Defaults</button>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-top">
+            <label for="accelSlider">Drive Acceleration & Punch</label>
+            <span id="accelValueLabel" class="slider-val emerald">4200 mm/s²</span>
+          </div>
+          <input id="accelSlider" class="emerald-slider" type="range" min="1000" max="12000" step="200" value="4200" />
+          <div class="slider-ticks">
+            <span>1000 (Smooth)</span>
+            <span>4200 (Quick)</span>
+            <span>12000 (Instant)</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-top">
+            <label for="leftDriftSlider">Leftward Drift (Motor Bias)</label>
+            <span id="leftDriftValueLabel" class="slider-val">0%</span>
+          </div>
+          <input id="leftDriftSlider" type="range" min="0" max="100" value="0" />
+          <div class="slider-ticks">
+            <span>0% (None)</span>
+            <span>35% (Left Pull)</span>
+            <span>100% (Hard Left)</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-top">
+            <label for="driftSlider">Rightward Drift (Motor Bias)</label>
+            <span id="driftValueLabel" class="slider-val">35%</span>
+          </div>
+          <input id="driftSlider" type="range" min="0" max="100" value="35" />
+          <div class="slider-ticks">
+            <span>0% (None)</span>
+            <span>35% (Right Pull)</span>
+            <span>100% (Hard Right)</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-top">
+            <label for="turnSpeedSlider">Quick Left/Right Spin Rate</label>
+            <span id="turnSpeedValueLabel" class="slider-val sky">450°/s</span>
+          </div>
+          <input id="turnSpeedSlider" class="sky-slider" type="range" min="220" max="720" step="10" value="450" />
+        </div>
+      </section>
+
+      <!-- Live Telemetry -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <span class="panel-label">Live Arena Telemetry</span>
+          <span class="badge-status" style="color:#94a3b8;">1219 × 1219 mm</span>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="tele-box">
+            <div class="tele-title">Position (X, Y)</div>
+            <div id="telemetryPos" class="tele-num">310, 960</div>
+            <div class="tele-unit">mm</div>
+          </div>
+          <div class="tele-box">
+            <div class="tele-title">Heading</div>
+            <div id="telemetryHeading" class="tele-num" style="color:#34d399;">0°</div>
+            <div class="tele-unit">deg</div>
+          </div>
+          <div class="tele-box">
+            <div class="tele-title">Pit Distance</div>
+            <div id="telemetryHoleDist" class="tele-num" style="color:#fbbf24;">468</div>
+            <div class="tele-unit">mm</div>
+          </div>
+        </div>
+
+        <div class="rpm-row">
+          <div class="rpm-item">
+            <div class="rpm-head">
+              <span>LEFT WHEEL</span>
+              <span id="leftWheelSpeedText">0 mm/s</span>
+            </div>
+            <div class="rpm-track">
+              <div id="leftWheelBar" class="rpm-fill"></div>
+            </div>
+          </div>
+          <div class="rpm-item">
+            <div class="rpm-head">
+              <span>RIGHT WHEEL</span>
+              <span id="rightWheelSpeedText">0 mm/s</span>
+            </div>
+            <div class="rpm-track">
+              <div id="rightWheelBar" class="rpm-fill"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var canvas = document.getElementById('arenaCanvas');
+      var container = document.getElementById('canvasContainer');
+      if (!canvas || !container) return;
+
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // UI References
+      var pitOverlay = document.getElementById('pitOverlay');
+      var headerResetBtn = document.getElementById('headerResetBtn');
+      var overlayResetBtn = document.getElementById('overlayResetBtn');
+      var toggleBotBtn = document.getElementById('toggleBotBtn');
+      var toggleBotLabel = document.getElementById('toggleBotLabel');
+      var resetCalibrationBtn = document.getElementById('resetCalibrationBtn');
+      var activeActionBadge = document.getElementById('activeActionBadge');
+
+      var btnFront = document.getElementById('btnFront');
+      var btnBack = document.getElementById('btnBack');
+      var btnLeft = document.getElementById('btnLeft');
+      var btnRight = document.getElementById('btnRight');
+      var btnPaddle = document.getElementById('btnPaddle');
+      var btnUnstick = document.getElementById('btnUnstick');
+
+      var accelSlider = document.getElementById('accelSlider');
+      var accelValueLabel = document.getElementById('accelValueLabel');
+      var leftDriftSlider = document.getElementById('leftDriftSlider');
+      var leftDriftValueLabel = document.getElementById('leftDriftValueLabel');
+      var driftSlider = document.getElementById('driftSlider');
+      var driftValueLabel = document.getElementById('driftValueLabel');
+      var turnSpeedSlider = document.getElementById('turnSpeedSlider');
+      var turnSpeedValueLabel = document.getElementById('turnSpeedValueLabel');
+
+      var telemetryPos = document.getElementById('telemetryPos');
+      var telemetryHeading = document.getElementById('telemetryHeading');
+      var telemetryHoleDist = document.getElementById('telemetryHoleDist');
+      var leftWheelSpeedText = document.getElementById('leftWheelSpeedText');
+      var rightWheelSpeedText = document.getElementById('rightWheelSpeedText');
+      var leftWheelBar = document.getElementById('leftWheelBar');
+      var rightWheelBar = document.getElementById('rightWheelBar');
+
+      // Arena & Robot Physical Dimensions (in millimeters, matching Appendix 1: 4ft x 4ft = 1219mm)
+      var ARENA_SIZE_MM = 1219;
+      var HOLE_SIZE_MM = 250;
+      var HOLE_CORNER_RADIUS_MM = 24;
+
+      // Wide-track 2-wheel robot dimensions (longer/wider across the side wheels)
+      var CAR_TRACK_WIDTH_MM = 210; // Distance between the two side wheels
+      var CAR_BODY_LENGTH_MM = 95;  // Front-to-back chassis body length
+      var FORK_LENGTH_MM = 48;      // Two front wedge forks
+      var WHEEL_DIAMETER_MM = 62;
+      var WHEEL_WIDTH_MM = 22;
+      var EFFECTIVE_RADIUS_MM = 88;
+
+      // Input state (first-pressed lock)
+      var input = {
+        front: false,
+        back: false,
+        left: false,
+        right: false,
+        paddle: false
+      };
+      var activeControl = null;
+
+      // Simulation state
+      var state = {
+        x: 310,
+        y: 960,
+        angle: -Math.PI / 2, // Facing North (-Y)
+        linearSpeed: 0,
+        angularSpeed: 0,
+        leftWheelVel: 0,
+        rightWheelVel: 0,
+        leftWheelPhase: 0,
+        rightWheelPhase: 0,
+        paddleSwingAngle: 0,
+        tireTracks: [],
+        trackTimer: 0,
+        isFalling: false,
+        fallProgress: 0,
+        isWallStuck: false,
+        stuckNormalX: 0,
+        stuckNormalY: 0,
+        pitEdgeWheel: null,
+        pitHangTimer: 0,
+        driveAccelMmPerSec2: 4200,
+        leftDriftFactor: 0,
+        rightDriftFactor: 0.35,
+        quickTurnDegPerSec: 450,
+        baseForwardSpeed: 480,
+        baseReverseSpeed: 370,
+        botEnabled: true,
+        bot: {
+          x: 890,
+          y: 280,
+          angle: Math.PI / 2,
+          linearSpeed: 0,
+          vx: 0,
+          vy: 0,
+          angularSpeed: 0,
+          leftWheelPhase: 0,
+          rightWheelPhase: 0,
+          isFalling: false,
+          fallProgress: 0,
+          respawnTimer: 0,
+          aiTimer: 0,
+          orbitDir: 1
+        }
+      };
+
+      // Pre-seeded wood grain lines
+      var woodGrainStrips = [];
+      for (var g = 0; g < 48; g++) {
+        woodGrainStrips.push({
+          y: (g / 48) * ARENA_SIZE_MM,
+          h: 8 + ((g * 17) % 18),
+          alpha: (g % 2 === 0) ? 0.032 : 0.02
+        });
+      }
+
+      // Robust Canvas Sizing with Safe Fallbacks
+      var canvasCssSize = 520;
+      function resizeCanvas() {
+        try {
+          var rect = container.getBoundingClientRect();
+          var fallbackWidth = Math.max(320, Math.min(580, (window.innerWidth || 800) - 48));
+          var measured = (rect && rect.width > 40) ? rect.width - 12 : fallbackWidth;
+          canvasCssSize = Math.max(300, Math.round(measured));
+
+          var dpr = Math.min(window.devicePixelRatio || 1, 2);
+          var targetPx = Math.round(canvasCssSize * dpr);
+
+          if (canvas.width !== targetPx || canvas.height !== targetPx) {
+            canvas.width = targetPx;
+            canvas.height = targetPx;
+          }
+        } catch (err) {
+          canvasCssSize = 480;
+          canvas.width = 480;
+          canvas.height = 480;
+        }
+      }
+
+      if (typeof ResizeObserver !== 'undefined') {
+        var ro = new ResizeObserver(function () {
+          resizeCanvas();
+        });
+        ro.observe(container);
+      }
+      window.addEventListener('resize', resizeCanvas);
+
+      // Clear all active inputs and button highlights
+      function clearAllControls() {
+        activeControl = null;
+        input.front = false;
+        input.back = false;
+        input.left = false;
+        input.right = false;
+        input.paddle = false;
+        [btnFront, btnBack, btnLeft, btnRight, btnPaddle].forEach(function (b) {
+          if (b) b.classList.remove('active-key');
+        });
+      }
+
+      // Activate a single control only if nothing else is currently held (first-pressed priority)
+      function activateSingleControl(keyName) {
+        if (activeControl !== null && activeControl !== keyName) {
+          return;
+        }
+        activeControl = keyName;
+        input[keyName] = true;
+        var btnMap = {
+          front: btnFront,
+          back: btnBack,
+          left: btnLeft,
+          right: btnRight,
+          paddle: btnPaddle
+        };
+        if (btnMap[keyName]) {
+          btnMap[keyName].classList.add('active-key');
+        }
+        updateActionBadge();
+      }
+
+      // Release the specified control if it is the one currently active
+      function releaseSingleControl(keyName) {
+        if (activeControl === keyName) {
+          clearAllControls();
+          updateActionBadge();
+        }
+      }
+
+      // Reset functions
+      function resetBot() {
+        state.bot.x = 890;
+        state.bot.y = 280;
+        state.bot.angle = Math.PI / 2;
+        state.bot.linearSpeed = 0;
+        state.bot.vx = 0;
+        state.bot.vy = 0;
+        state.bot.angularSpeed = 0;
+        state.bot.isFalling = false;
+        state.bot.fallProgress = 0;
+        state.bot.respawnTimer = 0;
+        state.bot.aiTimer = 0;
+        state.bot.orbitDir = 1;
+      }
+
+      function resetCar() {
+        state.x = 310;
+        state.y = 960;
+        state.angle = -Math.PI / 2;
+        state.linearSpeed = 0;
+        state.angularSpeed = 0;
+        state.leftWheelVel = 0;
+        state.rightWheelVel = 0;
+        state.paddleSwingAngle = 0;
+        state.isFalling = false;
+        state.fallProgress = 0;
+        state.isWallStuck = false;
+        state.stuckNormalX = 0;
+        state.stuckNormalY = 0;
+        state.pitEdgeWheel = null;
+        state.pitHangTimer = 0;
+        state.tireTracks = [];
+        clearAllControls();
+        updateActionBadge();
+        if (pitOverlay) pitOverlay.classList.add('hidden');
+        resetBot();
+      }
+
+      // Nudge car away from any wall it is stuck against
+      function unstickFromWall() {
+        if (state.isFalling) return;
+
+        var nudgeDistance = 28;
+        if (state.isWallStuck && (state.stuckNormalX !== 0 || state.stuckNormalY !== 0)) {
+          state.x += state.stuckNormalX * nudgeDistance;
+          state.y += state.stuckNormalY * nudgeDistance;
+        } else {
+          var halfTrack = CAR_TRACK_WIDTH_MM / 2 + WHEEL_WIDTH_MM * 0.45;
+          var halfFront = CAR_BODY_LENGTH_MM / 2 + FORK_LENGTH_MM * 0.85;
+          var halfBack = CAR_BODY_LENGTH_MM / 2 + 6;
+          var cosA = Math.cos(state.angle);
+          var sinA = Math.sin(state.angle);
+
+          var corners = [
+            [halfFront, -halfTrack],
+            [halfFront, halfTrack],
+            [-halfBack, -halfTrack],
+            [-halfBack, halfTrack],
+            [0, -halfTrack],
+            [0, halfTrack]
+          ];
+
+          var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (var i = 0; i < corners.length; i++) {
+            var lx = corners[i][0];
+            var ly = corners[i][1];
+            var wx = state.x + lx * cosA - ly * sinA;
+            var wy = state.y + lx * sinA + ly * cosA;
+            if (wx < minX) minX = wx;
+            if (wx > maxX) maxX = wx;
+            if (wy < minY) minY = wy;
+            if (wy > maxY) maxY = wy;
+          }
+
+          var wallThreshold = 26;
+          var pushed = false;
+
+          if (minX <= wallThreshold) {
+            state.x += nudgeDistance;
+            pushed = true;
+          } else if (maxX >= ARENA_SIZE_MM - wallThreshold) {
+            state.x -= nudgeDistance;
+            pushed = true;
+          }
+
+          if (minY <= wallThreshold) {
+            state.y += nudgeDistance;
+            pushed = true;
+          } else if (maxY >= ARENA_SIZE_MM - wallThreshold) {
+            state.y -= nudgeDistance;
+            pushed = true;
+          }
+
+          if (!pushed) {
+            var sideDir = (state.x < ARENA_SIZE_MM / 2) ? 1 : -1;
+            state.x += sideDir * 18;
+          }
+        }
+
+        state.isWallStuck = false;
+        state.stuckNormalX = 0;
+        state.stuckNormalY = 0;
+        state.linearSpeed = 0;
+        state.angularSpeed = 0;
+        updateActionBadge();
+        updateTelemetry();
+      }
+
+      if (btnUnstick) {
+        var triggerUnstick = function (e) {
+          if (e && e.cancelable) e.preventDefault();
+          btnUnstick.classList.add('active-key');
+          unstickFromWall();
+          setTimeout(function () {
+            btnUnstick.classList.remove('active-key');
+          }, 140);
+        };
+        btnUnstick.addEventListener('mousedown', triggerUnstick);
+        btnUnstick.addEventListener('touchstart', triggerUnstick, { passive: false });
+      }
+
+      // Bind Button Hold Events (Exclusive Single Control)
+      function bindHoldButton(btn, keyName) {
+        if (!btn) return;
+        var startHold = function (e) {
+          if (e && e.cancelable) e.preventDefault();
+          activateSingleControl(keyName);
+        };
+        var endHold = function (e) {
+          if (e && e.cancelable) e.preventDefault();
+          releaseSingleControl(keyName);
+        };
+
+        btn.addEventListener('mousedown', startHold);
+        btn.addEventListener('mouseup', endHold);
+        btn.addEventListener('mouseleave', endHold);
+        btn.addEventListener('touchstart', startHold, { passive: false });
+        btn.addEventListener('touchend', endHold, { passive: false });
+        btn.addEventListener('touchcancel', endHold, { passive: false });
+      }
+
+      bindHoldButton(btnFront, 'front');
+      bindHoldButton(btnBack, 'back');
+      bindHoldButton(btnLeft, 'left');
+      bindHoldButton(btnRight, 'right');
+      bindHoldButton(btnPaddle, 'paddle');
+
+      // Keyboard Support (First-Key Priority Lock + Unstick + Reset)
+      window.addEventListener('keydown', function (e) {
+        var code = e.code || e.key;
+        if (
+          code === 'ArrowUp' || code === 'ArrowDown' ||
+          code === 'ArrowLeft' || code === 'ArrowRight' ||
+          code === 'Space'
+        ) {
+          e.preventDefault();
+        }
+
+        if (code === 'ArrowUp' || code === 'KeyW' || e.key === 'w' || e.key === 'W') {
+          activateSingleControl('front');
+        } else if (code === 'ArrowDown' || code === 'KeyS' || e.key === 's' || e.key === 'S') {
+          activateSingleControl('back');
+        } else if (code === 'ArrowLeft' || code === 'KeyA' || e.key === 'a' || e.key === 'A') {
+          activateSingleControl('left');
+        } else if (code === 'ArrowRight' || code === 'KeyD' || e.key === 'd' || e.key === 'D') {
+          activateSingleControl('right');
+        } else if (code === 'Space' || e.key === ' ') {
+          activateSingleControl('paddle');
+        } else if (code === 'KeyU' || e.key === 'u' || e.key === 'U') {
+          unstickFromWall();
+        } else if (code === 'KeyR' || e.key === 'r' || e.key === 'R') {
+          resetCar();
+        }
+      });
+
+      window.addEventListener('keyup', function (e) {
+        var code = e.code || e.key;
+        if (code === 'ArrowUp' || code === 'KeyW' || e.key === 'w' || e.key === 'W') {
+          releaseSingleControl('front');
+        } else if (code === 'ArrowDown' || code === 'KeyS' || e.key === 's' || e.key === 'S') {
+          releaseSingleControl('back');
+        } else if (code === 'ArrowLeft' || code === 'KeyA' || e.key === 'a' || e.key === 'A') {
+          releaseSingleControl('left');
+        } else if (code === 'ArrowRight' || code === 'KeyD' || e.key === 'd' || e.key === 'D') {
+          releaseSingleControl('right');
+        } else if (code === 'Space' || e.key === ' ') {
+          releaseSingleControl('paddle');
+        }
+      });
+
+      window.addEventListener('blur', function () {
+        clearAllControls();
+        updateActionBadge();
+      });
+
+      function updateActionBadge() {
+        if (!activeActionBadge) return;
+        if (state.isWallStuck) {
+          activeActionBadge.textContent = 'STUCK ON WALL';
+          activeActionBadge.style.color = '#fb7185';
+          return;
+        }
+        if (state.pitEdgeWheel) {
+          activeActionBadge.textContent = (state.pitEdgeWheel === 'left' ? 'LEFT' : 'RIGHT') + ' TIRE IN PIT!';
+          activeActionBadge.style.color = '#fbbf24';
+          return;
+        }
+        activeActionBadge.style.color = '#fbbf24';
+        if (input.front) activeActionBadge.textContent = 'FRONT';
+        else if (input.back) activeActionBadge.textContent = 'BACK';
+        else if (input.left) activeActionBadge.textContent = 'SPIN LEFT';
+        else if (input.right) activeActionBadge.textContent = 'SPIN RIGHT';
+        else if (input.paddle) activeActionBadge.textContent = 'PADDLE';
+        else activeActionBadge.textContent = 'READY';
+      }
+
+      // Sliders & Header Controls
+      accelSlider.addEventListener('input', function () {
+        var val = parseInt(accelSlider.value, 10) || 4200;
+        state.driveAccelMmPerSec2 = val;
+        accelValueLabel.textContent = val + ' mm/s²';
+      });
+
+      leftDriftSlider.addEventListener('input', function () {
+        var val = parseInt(leftDriftSlider.value, 10) || 0;
+        state.leftDriftFactor = val / 100;
+        leftDriftValueLabel.textContent = val + '%';
+      });
+
+      driftSlider.addEventListener('input', function () {
+        var val = parseInt(driftSlider.value, 10) || 0;
+        state.rightDriftFactor = val / 100;
+        driftValueLabel.textContent = val + '%';
+      });
+
+      turnSpeedSlider.addEventListener('input', function () {
+        var val = parseInt(turnSpeedSlider.value, 10) || 450;
+        state.quickTurnDegPerSec = val;
+        turnSpeedValueLabel.textContent = val + '°/s';
+      });
+
+      resetCalibrationBtn.addEventListener('click', function () {
+        accelSlider.value = 4200;
+        state.driveAccelMmPerSec2 = 4200;
+        accelValueLabel.textContent = '4200 mm/s²';
+
+        leftDriftSlider.value = 0;
+        state.leftDriftFactor = 0;
+        leftDriftValueLabel.textContent = '0%';
+
+        driftSlider.value = 35;
+        state.rightDriftFactor = 0.35;
+        driftValueLabel.textContent = '35%';
+
+        turnSpeedSlider.value = 450;
+        state.quickTurnDegPerSec = 450;
+        turnSpeedValueLabel.textContent = '450°/s';
+      });
+
+      toggleBotBtn.addEventListener('click', function () {
+        state.botEnabled = !state.botEnabled;
+        if (state.botEnabled) {
+          toggleBotBtn.classList.add('bot-on');
+          toggleBotLabel.textContent = 'Sparring Bot: ON';
+          resetBot();
+        } else {
+          toggleBotBtn.classList.remove('bot-on');
+          toggleBotLabel.textContent = 'Sparring Bot: OFF';
+        }
+      });
+
+      headerResetBtn.addEventListener('click', resetCar);
+      overlayResetBtn.addEventListener('click', resetCar);
+
+      // Geometry Helpers
+      function isInsideCenterHole(px, py) {
+        var center = ARENA_SIZE_MM / 2;
+        var halfHole = HOLE_SIZE_MM / 2;
+        var dx = Math.abs(px - center);
+        var dy = Math.abs(py - center);
+        if (dx > halfHole || dy > halfHole) return false;
+
+        var inner = halfHole - HOLE_CORNER_RADIUS_MM;
+        if (dx <= inner || dy <= inner) return true;
+
+        var cdx = dx - inner;
+        var cdy = dy - inner;
+        return (cdx * cdx + cdy * cdy) <= (HOLE_CORNER_RADIUS_MM * HOLE_CORNER_RADIUS_MM);
+      }
+
+      function normalizeAngle(a) {
+        while (a > Math.PI) a -= Math.PI * 2;
+        while (a < -Math.PI) a += Math.PI * 2;
+        return a;
+      }
+
+      function resolveArenaWalls(entity, isPlayer) {
+        var halfTrack = CAR_TRACK_WIDTH_MM / 2 + WHEEL_WIDTH_MM * 0.45;
+        var halfFront = CAR_BODY_LENGTH_MM / 2 + FORK_LENGTH_MM * 0.85;
+        var halfBack = CAR_BODY_LENGTH_MM / 2 + 6;
+
+        var cosA = Math.cos(entity.angle);
+        var sinA = Math.sin(entity.angle);
+
+        var corners = [
+          { lx: halfFront, ly: -halfTrack, isFront: true },
+          { lx: halfFront, ly: halfTrack, isFront: true },
+          { lx: halfFront, ly: 0, isFront: true },
+          { lx: -halfBack, ly: -halfTrack, isFront: false },
+          { lx: -halfBack, ly: halfTrack, isFront: false },
+          { lx: 0, ly: -halfTrack, isFront: false },
+          { lx: 0, ly: halfTrack, isFront: false }
+        ];
+
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        var frontMinX = Infinity, frontMaxX = -Infinity, frontMinY = Infinity, frontMaxY = -Infinity;
+
+        for (var i = 0; i < corners.length; i++) {
+          var lx = corners[i].lx;
+          var ly = corners[i].ly;
+          var wx = entity.x + lx * cosA - ly * sinA;
+          var wy = entity.y + lx * sinA + ly * cosA;
+          if (wx < minX) minX = wx;
+          if (wx > maxX) maxX = wx;
+          if (wy < minY) minY = wy;
+          if (wy > maxY) maxY = wy;
+
+          if (corners[i].isFront) {
+            if (wx < frontMinX) frontMinX = wx;
+            if (wx > frontMaxX) frontMaxX = wx;
+            if (wy < frontMinY) frontMinY = wy;
+            if (wy > frontMaxY) frontMaxY = wy;
+          }
+        }
+
+        var hit = false;
+        var frontHit = false;
+        var normX = 0;
+        var normY = 0;
+
+        if (minX < 0) {
+          entity.x += -minX;
+          hit = true;
+          if (frontMinX <= 1.5) {
+            frontHit = true;
+            normX = 1;
+          }
+        } else if (maxX > ARENA_SIZE_MM) {
+          entity.x -= (maxX - ARENA_SIZE_MM);
+          hit = true;
+          if (frontMaxX >= ARENA_SIZE_MM - 1.5) {
+            frontHit = true;
+            normX = -1;
+          }
+        }
+
+        if (minY < 0) {
+          entity.y += -minY;
+          hit = true;
+          if (frontMinY <= 1.5) {
+            frontHit = true;
+            normY = 1;
+          }
+        } else if (maxY > ARENA_SIZE_MM) {
+          entity.y -= (maxY - ARENA_SIZE_MM);
+          hit = true;
+          if (frontMaxY >= ARENA_SIZE_MM - 1.5) {
+            frontHit = true;
+            normY = -1;
+          }
+        }
+
+        if (hit && isPlayer) {
+          if (frontHit) {
+            entity.linearSpeed = 0;
+            entity.angularSpeed = 0;
+            entity.isWallStuck = true;
+            entity.stuckNormalX = normX;
+            entity.stuckNormalY = normY;
+            updateActionBadge();
+          } else {
+            // Back or side tires touching the wall slide smoothly without sticking
+            entity.linearSpeed *= 0.94;
+          }
+        }
+      }
+
+      // Physics Update
+      function updatePhysics(dt) {
+        if (state.isFalling) {
+          state.fallProgress = Math.min(1, state.fallProgress + dt * 2.1);
+          var center = ARENA_SIZE_MM / 2;
+          state.x += (center - state.x) * Math.min(1, dt * 5.5);
+          state.y += (center - state.y) * Math.min(1, dt * 5.5);
+          state.angle += dt * 3.0;
+
+          if (state.fallProgress >= 1 && pitOverlay && pitOverlay.classList.contains('hidden')) {
+            pitOverlay.classList.remove('hidden');
+          }
+          updateTelemetry();
+          return;
+        }
+
+        // Swing front servo paddle even if stuck on a wall
+        var targetPaddle = input.paddle ? 0.85 : 0;
+        state.paddleSwingAngle += (targetPaddle - state.paddleSwingAngle) * Math.min(1, dt * 22);
+
+        // If pinned/stuck on the wall, freeze movement & rotation until Unstick is pressed
+        if (state.isWallStuck) {
+          state.linearSpeed = 0;
+          state.angularSpeed = 0;
+          state.leftWheelVel = 0;
+          state.rightWheelVel = 0;
+          if (state.botEnabled) {
+            updateOpponentBot(dt, 0, 0);
+          }
+          updateTelemetry();
+          return;
+        }
+
+        // Scale both launch acceleration and top speed from the slider
+        var baseAccel = state.driveAccelMmPerSec2;
+        var speedBoostMultiplier = 0.65 + (baseAccel / 4200) * 0.45;
+        var currentMaxForward = state.baseForwardSpeed * speedBoostMultiplier;
+        var currentMaxReverse = state.baseReverseSpeed * speedBoostMultiplier;
+
+        // Linear velocity (Front / Back)
+        var targetLinear = 0;
+        if (input.front && !input.back) {
+          targetLinear = currentMaxForward;
+        } else if (input.back && !input.front) {
+          targetLinear = -currentMaxReverse;
+        }
+
+        var accel = targetLinear !== 0 ? baseAccel : Math.max(4600, baseAccel * 1.15);
+        if (state.linearSpeed < targetLinear) {
+          state.linearSpeed = Math.min(targetLinear, state.linearSpeed + accel * dt);
+        } else if (state.linearSpeed > targetLinear) {
+          state.linearSpeed = Math.max(targetLinear, state.linearSpeed - accel * dt);
+        }
+
+        // Angular velocity: Quick Left/Right spin + net motor drift pull
+        var quickTurnRad = (state.quickTurnDegPerSec * Math.PI) / 180;
+        var targetAngular = 0;
+
+        if (input.left && !input.right) {
+          targetAngular -= quickTurnRad;
+        } else if (input.right && !input.left) {
+          targetAngular += quickTurnRad;
+        }
+
+        if (Math.abs(state.linearSpeed) > 5) {
+          var speedRatio = state.linearSpeed / currentMaxForward;
+          var maxDriftRad = 1.9;
+          var netDriftFactor = state.rightDriftFactor - state.leftDriftFactor;
+          targetAngular += speedRatio * netDriftFactor * maxDriftRad;
+        }
+
+        state.angularSpeed += (targetAngular - state.angularSpeed) * Math.min(1, dt * 30);
+        state.angle += state.angularSpeed * dt;
+
+        var vx = Math.cos(state.angle) * state.linearSpeed;
+        var vy = Math.sin(state.angle) * state.linearSpeed;
+        state.x += vx * dt;
+        state.y += vy * dt;
+
+        // Differential wheel velocities & pit-edge tire check
+        var halfTrack = CAR_TRACK_WIDTH_MM / 2;
+        var perpX = -Math.sin(state.angle) * halfTrack;
+        var perpY = Math.cos(state.angle) * halfTrack;
+        var leftWheelX = state.x - perpX;
+        var leftWheelY = state.y - perpY;
+        var rightWheelX = state.x + perpX;
+        var rightWheelY = state.y + perpY;
+
+        var leftInHole = isInsideCenterHole(leftWheelX, leftWheelY);
+        var rightInHole = isInsideCenterHole(rightWheelX, rightWheelY);
+
+        if (leftInHole || rightInHole) {
+          state.isFalling = true;
+          state.fallProgress = 0;
+          state.linearSpeed = 0;
+          state.angularSpeed = 0;
+          state.pitEdgeWheel = null;
+          updateTelemetry();
+          return;
+        }
+
+        state.leftWheelVel = state.linearSpeed + state.angularSpeed * halfTrack;
+        state.rightWheelVel = state.linearSpeed - state.angularSpeed * halfTrack;
+        state.leftWheelPhase = (state.leftWheelPhase + state.leftWheelVel * dt) % 1000;
+        state.rightWheelPhase = (state.rightWheelPhase + state.rightWheelVel * dt) % 1000;
+
+        // Sparring Bot AI & Shoving Collision
+        if (state.botEnabled) {
+          updateOpponentBot(dt, vx, vy);
+        }
+
+        resolveArenaWalls(state, true);
+
+        // Tire tracks on MDF floor
+        if (Math.abs(state.leftWheelVel) + Math.abs(state.rightWheelVel) > 50) {
+          state.trackTimer += dt;
+          if (state.trackTimer >= 0.04) {
+            state.trackTimer = 0;
+            var trackPerpX = -Math.sin(state.angle) * halfTrack;
+            var trackPerpY = Math.cos(state.angle) * halfTrack;
+            state.tireTracks.push({
+              lx: state.x - trackPerpX,
+              ly: state.y - trackPerpY,
+              rx: state.x + trackPerpX,
+              ry: state.y + trackPerpY,
+              alpha: 0.22
+            });
+            if (state.tireTracks.length > 80) state.tireTracks.shift();
+          }
+        }
+
+        for (var i = state.tireTracks.length - 1; i >= 0; i--) {
+          state.tireTracks[i].alpha -= dt * 0.045;
+          if (state.tireTracks[i].alpha <= 0) state.tireTracks.splice(i, 1);
+        }
+
+        // Check center hole fall
+        if (isInsideCenterHole(state.x, state.y)) {
+          state.isFalling = true;
+          state.fallProgress = 0;
+          state.linearSpeed = 0;
+          state.angularSpeed = 0;
+          state.pitEdgeWheel = null;
+        }
+
+        updateTelemetry();
+      }
+
+      function updateOpponentBot(dt, playerVx, playerVy) {
+        var bot = state.bot;
+        var center = ARENA_SIZE_MM / 2;
+
+        if (bot.isFalling) {
+          bot.fallProgress = Math.min(1, bot.fallProgress + dt * 2.1);
+          bot.x += (center - bot.x) * Math.min(1, dt * 5.5);
+          bot.y += (center - bot.y) * Math.min(1, dt * 5.5);
+          bot.angle += dt * 3.0;
+          if (bot.fallProgress >= 1) {
+            bot.respawnTimer += dt;
+            if (bot.respawnTimer > 1.6) resetBot();
+          }
+          return;
+        }
+
+        // Match player's exact motor torque, acceleration, top speed, and turning rate
+        var baseAccel = state.driveAccelMmPerSec2;
+        var speedBoostMultiplier = 0.65 + (baseAccel / 4200) * 0.45;
+        var botMaxForward = state.baseForwardSpeed * speedBoostMultiplier;
+        var quickTurnRad = (state.quickTurnDegPerSec * Math.PI) / 180;
+
+        bot.aiTimer += dt;
+        var distToHole = Math.hypot(bot.x - center, bot.y - center);
+        var safePitRadius = HOLE_SIZE_MM * 0.72 + CAR_TRACK_WIDTH_MM * 0.65 + 75; // ~335 mm safe buffer around center pit
+
+        // Compute goal point on the safe outer ring so the bot navigates AROUND the center pit
+        var goalX = state.x;
+        var goalY = state.y;
+
+        if (state.isFalling) {
+          // Patrol the safe ring while player respawns
+          var patrolAngle = bot.aiTimer * 0.85;
+          goalX = center + Math.cos(patrolAngle) * 410;
+          goalY = center + Math.sin(patrolAngle) * 410;
+        } else {
+          // Check if the direct line from bot to player passes near the center pit
+          var toPx = state.x - bot.x;
+          var toPy = state.y - bot.y;
+          var segLenSq = toPx * toPx + toPy * toPy;
+          var closestDistToPit = distToHole;
+          if (segLenSq > 1) {
+            var t = ((center - bot.x) * toPx + (center - bot.y) * toPy) / segLenSq;
+            t = Math.max(0, Math.min(1, t));
+            var projX = bot.x + t * toPx;
+            var projY = bot.y + t * toPy;
+            closestDistToPit = Math.hypot(projX - center, projY - center);
+          }
+
+          if (closestDistToPit < safePitRadius) {
+            // Pick a tangential waypoint around the pit on the shorter side toward the player
+            var botAngleFromCenter = Math.atan2(bot.y - center, bot.x - center);
+            var playerAngleFromCenter = Math.atan2(state.y - center, state.x - center);
+            var angleDiff = normalizeAngle(playerAngleFromCenter - botAngleFromCenter);
+            bot.orbitDir = angleDiff >= 0 ? 1 : -1;
+
+            var waypointAngle = botAngleFromCenter + bot.orbitDir * 0.78;
+            var waypointRadius = Math.max(safePitRadius + 35, 395);
+            goalX = Math.max(175, Math.min(ARENA_SIZE_MM - 175, center + Math.cos(waypointAngle) * waypointRadius));
+            goalY = Math.max(175, Math.min(ARENA_SIZE_MM - 175, center + Math.sin(waypointAngle) * waypointRadius));
+          }
+        }
+
+        // Steering priority: 1) Pit edge avoidance -> 2) Wall clearance -> 3) Engage player/waypoint
+        var desiredSpeed = botMaxForward;
+        var desiredTurn = 0;
+
+        if (distToHole < safePitRadius) {
+          // Steer tangentially + outward away from the center pit rim
+          var outwardAngle = Math.atan2(bot.y - center, bot.x - center);
+          var tangentAngle = outwardAngle + bot.orbitDir * (Math.PI * 0.42);
+          var diffPit = normalizeAngle(tangentAngle - bot.angle);
+          desiredTurn = Math.max(-quickTurnRad, Math.min(quickTurnRad, diffPit * 6.0));
+          // Slow down slightly only if pointing directly inward toward the pit
+          var pointingInward = Math.cos(normalizeAngle(outwardAngle + Math.PI - bot.angle));
+          if (pointingInward > 0.35) {
+            desiredSpeed = botMaxForward * 0.45;
+          }
+        } else if (
+          bot.x < 170 || bot.x > ARENA_SIZE_MM - 170 ||
+          bot.y < 170 || bot.y > ARENA_SIZE_MM - 170
+        ) {
+          // Turn smoothly along the safe ring away from perimeter walls
+          var wallBotAngle = Math.atan2(bot.y - center, bot.x - center);
+          var nextRingAngle = wallBotAngle + bot.orbitDir * 0.65;
+          var ringX = center + Math.cos(nextRingAngle) * 390;
+          var ringY = center + Math.sin(nextRingAngle) * 390;
+          var toRing = Math.atan2(ringY - bot.y, ringX - bot.x);
+          var diffWall = normalizeAngle(toRing - bot.angle);
+          desiredTurn = Math.max(-quickTurnRad, Math.min(quickTurnRad, diffWall * 5.0));
+        } else {
+          var toGoal = Math.atan2(goalY - bot.y, goalX - bot.x);
+          var diffGoal = normalizeAngle(toGoal - bot.angle);
+          desiredTurn = Math.max(-quickTurnRad, Math.min(quickTurnRad, diffGoal * 4.5));
+        }
+
+        // Apply identical acceleration & angular response as the player car
+        if (bot.linearSpeed < desiredSpeed) {
+          bot.linearSpeed = Math.min(desiredSpeed, bot.linearSpeed + baseAccel * dt);
+        } else if (bot.linearSpeed > desiredSpeed) {
+          bot.linearSpeed = Math.max(desiredSpeed, bot.linearSpeed - baseAccel * dt);
+        }
+
+        bot.angularSpeed += (desiredTurn - bot.angularSpeed) * Math.min(1, dt * 30);
+        bot.angle += bot.angularSpeed * dt;
+
+        var fvx = Math.cos(bot.angle) * bot.linearSpeed;
+        var fvy = Math.sin(bot.angle) * bot.linearSpeed;
+        bot.vx += (fvx - bot.vx) * Math.min(1, dt * 16);
+        bot.vy += (fvy - bot.vy) * Math.min(1, dt * 16);
+
+        bot.x += bot.vx * dt;
+        bot.y += bot.vy * dt;
+
+        var halfTrack = CAR_TRACK_WIDTH_MM / 2;
+        var mag = Math.hypot(bot.vx, bot.vy);
+        bot.leftWheelPhase = (bot.leftWheelPhase + (mag + bot.angularSpeed * halfTrack) * dt) % 1000;
+        bot.rightWheelPhase = (bot.rightWheelPhase + (mag - bot.angularSpeed * halfTrack) * dt) % 1000;
+
+        // Equal-torque & equal-speed robot-to-robot push collision (50/50 impulse exchange)
+        var dx = bot.x - state.x;
+        var dy = bot.y - state.y;
+        var dist = Math.hypot(dx, dy);
+        var minSep = EFFECTIVE_RADIUS_MM * 1.85;
+
+        if (dist > 0.01 && dist < minSep) {
+          var nx = dx / dist;
+          var ny = dy / dist;
+          var overlap = minSep - dist;
+
+          // Equal 50/50 positional separation
+          state.x -= nx * overlap * 0.5;
+          state.y -= ny * overlap * 0.5;
+          bot.x += nx * overlap * 0.5;
+          bot.y += ny * overlap * 0.5;
+
+          // Equal motor drive force along collision normal
+          var playerDriveForce = Math.max(0, playerVx * nx + playerVy * ny) * (input.paddle ? 1.35 : 1.0);
+          var botDriveForce = Math.max(0, -(bot.vx * nx + bot.vy * ny));
+          var netPush = playerDriveForce - botDriveForce;
+
+          if (netPush > 0) {
+            // Player wins the shoving contest (can still push the bot into the pit!)
+            bot.vx += nx * netPush * 1.05;
+            bot.vy += ny * netPush * 1.05;
+            bot.linearSpeed *= 0.86;
+            state.linearSpeed *= 0.92;
+          } else if (netPush < 0) {
+            // Opponent bot wins the shoving contest with equal torque
+            var pushBack = -netPush;
+            state.x -= nx * pushBack * dt * 1.1;
+            state.y -= ny * pushBack * dt * 1.1;
+            state.linearSpeed *= 0.86;
+            bot.linearSpeed *= 0.92;
+          } else {
+            // Deadlocked stalemate when driving head-on at identical torque
+            state.linearSpeed *= 0.85;
+            bot.linearSpeed *= 0.85;
+          }
+
+          if (input.paddle) {
+            bot.vx += nx * 240;
+            bot.vy += ny * 240;
+          }
+        }
+
+        resolveArenaWalls(bot, false);
+
+        // Check if either bot wheel or chassis enters the center pit (e.g., when shoved in by the player)
+        var botPerpX = -Math.sin(bot.angle) * halfTrack;
+        var botPerpY = Math.cos(bot.angle) * halfTrack;
+        if (
+          isInsideCenterHole(bot.x, bot.y) ||
+          isInsideCenterHole(bot.x - botPerpX, bot.y - botPerpY) ||
+          isInsideCenterHole(bot.x + botPerpX, bot.y + botPerpY)
+        ) {
+          bot.isFalling = true;
+          bot.fallProgress = 0;
+        }
+      }
+
+      // Update Telemetry Readouts
+      function updateTelemetry() {
+        var cx = Math.max(0, Math.min(ARENA_SIZE_MM, Math.round(state.x)));
+        var cy = Math.max(0, Math.min(ARENA_SIZE_MM, Math.round(state.y)));
+        if (telemetryPos) telemetryPos.textContent = cx + ', ' + cy;
+
+        var deg = Math.round(((state.angle * 180) / Math.PI + 90) % 360);
+        if (deg < 0) deg += 360;
+        if (telemetryHeading) telemetryHeading.textContent = deg + '°';
+
+        var center = ARENA_SIZE_MM / 2;
+        var distCenter = Math.hypot(state.x - center, state.y - center);
+        var distEdge = Math.max(0, Math.round(distCenter - HOLE_SIZE_MM / 2));
+        if (telemetryHoleDist) telemetryHoleDist.textContent = distEdge;
+
+        var lv = Math.round(state.leftWheelVel);
+        var rv = Math.round(state.rightWheelVel);
+        if (leftWheelSpeedText) leftWheelSpeedText.textContent = lv + ' mm/s';
+        if (rightWheelSpeedText) rightWheelSpeedText.textContent = rv + ' mm/s';
+
+        var maxRef = 750;
+        if (leftWheelBar) {
+          leftWheelBar.style.width = Math.min(100, Math.round((Math.abs(lv) / maxRef) * 100)) + '%';
+          leftWheelBar.style.backgroundColor = lv >= 0 ? '#34d399' : '#fbbf24';
+        }
+        if (rightWheelBar) {
+          rightWheelBar.style.width = Math.min(100, Math.round((Math.abs(rv) / maxRef) * 100)) + '%';
+          rightWheelBar.style.backgroundColor = rv >= 0 ? '#34d399' : '#fbbf24';
+        }
+      }
+
+      // Drawing Helpers
+      function drawRoundedRect(c, x, y, w, h, r) {
+        var radius = Math.min(r, w / 2, h / 2);
+        c.beginPath();
+        c.moveTo(x + radius, y);
+        c.lineTo(x + w - radius, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + radius);
+        c.lineTo(x + w, y + h - radius);
+        c.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        c.lineTo(x + radius, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - radius);
+        c.lineTo(x, y + radius);
+        c.quadraticCurveTo(x, y, x + radius, y);
+        c.closePath();
+      }
+
+      function drawWheel(c, cx, cy, phaseMm) {
+        c.save();
+        c.translate(cx, cy);
+
+        var wL = WHEEL_DIAMETER_MM;
+        var wW = WHEEL_WIDTH_MM;
+
+        // Rubber tire
+        drawRoundedRect(c, -wL / 2, -wW / 2, wL, wW, 4);
+        c.fillStyle = '#090d16';
+        c.fill();
+        c.strokeStyle = '#334155';
+        c.lineWidth = 2;
+        c.stroke();
+
+        // Animated tire tread lugs
+        c.save();
+        drawRoundedRect(c, -wL / 2 + 2, -wW / 2 + 2, wL - 4, wW - 4, 3);
+        c.clip();
+
+        var lugSpacing = 10;
+        var offset = ((phaseMm % lugSpacing) + lugSpacing) % lugSpacing;
+        c.fillStyle = '#94a3b8';
+        for (var x = -wL / 2 - lugSpacing + offset; x < wL / 2 + lugSpacing; x += lugSpacing) {
+          c.fillRect(x, -wW / 2 + 2, 3.5, wW - 4);
+        }
+        c.restore();
+
+        c.restore();
+      }
+
+      function drawRobot(c, cfg) {
+        c.save();
+        c.translate(cfg.x, cfg.y);
+        c.rotate(cfg.angle);
+
+        if (cfg.isFalling) {
+          var shrink = Math.max(0.06, 1 - cfg.fallProgress * 0.92);
+          c.scale(shrink, shrink);
+          c.globalAlpha = Math.max(0, 1 - cfg.fallProgress * 0.85);
+        }
+
+        var halfTrack = CAR_TRACK_WIDTH_MM / 2;
+        var bodyLen = CAR_BODY_LENGTH_MM;
+        var bodyWidth = CAR_TRACK_WIDTH_MM - WHEEL_WIDTH_MM * 0.65;
+
+        // Soft floor shadow
+        c.fillStyle = 'rgba(15, 23, 42, 0.24)';
+        drawRoundedRect(c, -bodyLen * 0.5 + 6, -bodyWidth * 0.5 + 7, bodyLen + FORK_LENGTH_MM * 0.7, bodyWidth, 10);
+        c.fill();
+
+        // Front Left & Right Wedge Forks (+X direction)
+        var forkW = 14;
+        var forkY = bodyWidth * 0.42;
+        c.fillStyle = cfg.forkColor;
+        c.strokeStyle = '#1e293b';
+        c.lineWidth = 2;
+
+        drawRoundedRect(c, bodyLen * 0.35, -forkY - forkW / 2, FORK_LENGTH_MM, forkW, 4);
+        c.fill();
+        c.stroke();
+
+        drawRoundedRect(c, bodyLen * 0.35, forkY - forkW / 2, FORK_LENGTH_MM, forkW, 4);
+        c.fill();
+        c.stroke();
+
+        // ONLY Two Large Side Wheels (left & right ends)
+        drawWheel(c, 0, -halfTrack, cfg.leftWheelPhase);
+        drawWheel(c, 0, halfTrack, cfg.rightWheelPhase);
+
+        // Wide Rectangular Chassis
+        drawRoundedRect(c, -bodyLen / 2, -bodyWidth / 2, bodyLen, bodyWidth, 8);
+        c.fillStyle = cfg.primaryColor;
+        c.fill();
+        c.strokeStyle = '#1e293b';
+        c.lineWidth = 2.5;
+        c.stroke();
+
+        // Rear Bumper Accent Bar
+        c.fillStyle = cfg.forkColor;
+        c.fillRect(-bodyLen / 2 + 2, -bodyWidth / 2 + 4, 11, bodyWidth - 8);
+
+        // Central Servo Housing
+        c.fillStyle = '#0f172a';
+        drawRoundedRect(c, -15, -20, 36, 40, 5);
+        c.fill();
+
+        // Central Servo Paddle Arm (swings on Space / Paddle button)
+        c.save();
+        c.translate(2, 0);
+        c.rotate(cfg.paddleAngle || 0);
+        c.fillStyle = cfg.paddleColor;
+        drawRoundedRect(c, -4, -5.5, 48, 11, 3.5);
+        c.fill();
+        c.strokeStyle = '#1e293b';
+        c.lineWidth = 1.6;
+        c.stroke();
+        c.restore();
+
+        // Orientation Arrow + Label
+        c.save();
+        c.rotate(Math.PI / 2);
+        c.fillStyle = '#0f172a';
+        c.font = '700 14px sans-serif';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(cfg.label, 0, 27);
+        c.restore();
+
+        c.restore();
+      }
+
+      // Main Render Function
+      function render() {
+        var W = canvas.width;
+        var H = canvas.height;
+        if (W <= 0 || H <= 0) return;
+
+        ctx.save();
+        ctx.clearRect(0, 0, W, H);
+
+        // Background slate frame around arena blueprint
+        ctx.fillStyle = '#14171c';
+        ctx.fillRect(0, 0, W, H);
+
+        // Margin around the 1219mm x 1219mm arena for blueprint dimension callouts
+        var marginPx = W * 0.105;
+        var arenaPx = W - marginPx * 2;
+        var scale = arenaPx / ARENA_SIZE_MM;
+
+        // 1. Blueprint Dimension Callouts ("4 ft (1219 mm)")
+        ctx.strokeStyle = '#60a5fa';
+        ctx.fillStyle = '#93c5fd';
+        ctx.lineWidth = Math.max(1.5, W * 0.0025);
+        var fontSize = Math.max(11, Math.round(W * 0.022));
+        ctx.font = '600 ' + fontSize + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Top dimension bar
+        var topY = marginPx * 0.44;
+        ctx.beginPath();
+        ctx.moveTo(marginPx, topY);
+        ctx.lineTo(marginPx + arenaPx, topY);
+        ctx.moveTo(marginPx, topY - 7);
+        ctx.lineTo(marginPx, topY + 7);
+        ctx.moveTo(marginPx + arenaPx, topY - 7);
+        ctx.lineTo(marginPx + arenaPx, topY + 7);
+        ctx.stroke();
+
+        ctx.fillStyle = '#14171c';
+        ctx.fillRect(W / 2 - fontSize * 4.4, topY - fontSize * 0.75, fontSize * 8.8, fontSize * 1.5);
+        ctx.fillStyle = '#93c5fd';
+        ctx.fillText('4 ft (1219 mm)', W / 2, topY);
+
+        // Left vertical dimension bar
+        var leftX = marginPx * 0.44;
+        ctx.beginPath();
+        ctx.moveTo(leftX, marginPx);
+        ctx.lineTo(leftX, marginPx + arenaPx);
+        ctx.moveTo(leftX - 7, marginPx);
+        ctx.lineTo(leftX + 7, marginPx);
+        ctx.moveTo(leftX - 7, marginPx + arenaPx);
+        ctx.lineTo(leftX + 7, marginPx + arenaPx);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(leftX, H / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = '#14171c';
+        ctx.fillRect(-fontSize * 4.4, -fontSize * 0.75, fontSize * 8.8, fontSize * 1.5);
+        ctx.fillStyle = '#93c5fd';
+        ctx.fillText('4 ft (1219 mm)', 0, 0);
+        ctx.restore();
+
+        // 2. Outer Dark Aluminum Extrusion Frame (Appendix 1)
+        var framePad = Math.max(8, W * 0.018);
+        drawRoundedRect(
+          ctx,
+          marginPx - framePad,
+          marginPx - framePad,
+          arenaPx + framePad * 2,
+          arenaPx + framePad * 2,
+          10
+        );
+        ctx.fillStyle = '#1e242d';
+        ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Corner T-slot brackets
+        var cornerSize = framePad * 1.35;
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(marginPx - framePad, marginPx - framePad, cornerSize, cornerSize);
+        ctx.fillRect(marginPx + arenaPx + framePad - cornerSize, marginPx - framePad, cornerSize, cornerSize);
+        ctx.fillRect(marginPx - framePad, marginPx + arenaPx + framePad - cornerSize, cornerSize, cornerSize);
+        ctx.fillRect(marginPx + arenaPx + framePad - cornerSize, marginPx + arenaPx + framePad - cornerSize, cornerSize, cornerSize);
+
+        // Translate into 1219mm x 1219mm Arena Coordinate Space
+        ctx.save();
+        ctx.translate(marginPx, marginPx);
+        ctx.scale(scale, scale);
+
+        // 3. Birch / MDF Wood Floor
+        ctx.fillStyle = '#dcc19d';
+        ctx.fillRect(0, 0, ARENA_SIZE_MM, ARENA_SIZE_MM);
+
+        // Subtle wood grain & center MDF board seam
+        for (var s = 0; s < woodGrainStrips.length; s++) {
+          var strip = woodGrainStrips[s];
+          ctx.fillStyle = 'rgba(139, 98, 56, ' + strip.alpha + ')';
+          ctx.fillRect(0, strip.y, ARENA_SIZE_MM, strip.h);
+        }
+
+        // Center MDF panel seam line & 200mm grid ticks
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.28)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ARENA_SIZE_MM / 2, 0);
+        ctx.lineTo(ARENA_SIZE_MM / 2, ARENA_SIZE_MM);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(120, 82, 45, 0.14)';
+        ctx.lineWidth = 2;
+        for (var gx = 200; gx < ARENA_SIZE_MM; gx += 200) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, ARENA_SIZE_MM);
+          ctx.stroke();
+        }
+        for (var gy = 200; gy < ARENA_SIZE_MM; gy += 200) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(ARENA_SIZE_MM, gy);
+          ctx.stroke();
+        }
+
+        // Inner MDF wall bevel shadow
+        ctx.strokeStyle = 'rgba(69, 43, 18, 0.45)';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(5, 5, ARENA_SIZE_MM - 10, ARENA_SIZE_MM - 10);
+
+        // 4. Tire Tread Tracks
+        for (var t = 0; t < state.tireTracks.length; t++) {
+          var tr = state.tireTracks[t];
+          ctx.fillStyle = 'rgba(62, 42, 24, ' + tr.alpha + ')';
+          if (tr.lx !== null && tr.ly !== null) {
+            ctx.fillRect(tr.lx - 5, tr.ly - 5, 10, 10);
+          }
+          if (tr.rx !== null && tr.ry !== null) {
+            ctx.fillRect(tr.rx - 5, tr.ry - 5, 10, 10);
+          }
+        }
+
+        // 5. Center Pit Hole (250mm x 250mm rounded square cutout)
+        var holeX = (ARENA_SIZE_MM - HOLE_SIZE_MM) / 2;
+        var holeY = (ARENA_SIZE_MM - HOLE_SIZE_MM) / 2;
+
+        // Hazard dashed perimeter around pit
+        ctx.save();
+        drawRoundedRect(ctx, holeX - 18, holeY - 18, HOLE_SIZE_MM + 36, HOLE_SIZE_MM + 36, HOLE_CORNER_RADIUS_MM + 10);
+        ctx.strokeStyle = 'rgba(225, 29, 72, 0.42)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([18, 14]);
+        ctx.stroke();
+        ctx.restore();
+
+        // Dark pit abyss & inner beveled wood thickness
+        drawRoundedRect(ctx, holeX, holeY, HOLE_SIZE_MM, HOLE_SIZE_MM, HOLE_CORNER_RADIUS_MM);
+        var pitGrad = ctx.createRadialGradient(
+          ARENA_SIZE_MM / 2, ARENA_SIZE_MM / 2, 15,
+          ARENA_SIZE_MM / 2, ARENA_SIZE_MM / 2, HOLE_SIZE_MM * 0.75
+        );
+        pitGrad.addColorStop(0, '#040609');
+        pitGrad.addColorStop(0.75, '#0c1017');
+        pitGrad.addColorStop(1, '#1e2633');
+        ctx.fillStyle = pitGrad;
+        ctx.fill();
+
+        // Inner wood thickness rim
+        ctx.strokeStyle = '#5c3d21';
+        ctx.lineWidth = 7;
+        ctx.stroke();
+
+        // Pit label
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.font = '700 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('CENTER PIT', ARENA_SIZE_MM / 2, ARENA_SIZE_MM / 2 - 12);
+        ctx.font = '600 17px sans-serif';
+        ctx.fillText('250 × 250 mm', ARENA_SIZE_MM / 2, ARENA_SIZE_MM / 2 + 14);
+
+        // 6. Sparring Opponent Bot (Yellow chassis with purple forks)
+        if (state.botEnabled) {
+          drawRobot(ctx, {
+            x: state.bot.x,
+            y: state.bot.y,
+            angle: state.bot.angle,
+            leftWheelPhase: state.bot.leftWheelPhase,
+            rightWheelPhase: state.bot.rightWheelPhase,
+            isFalling: state.bot.isFalling,
+            fallProgress: state.bot.fallProgress,
+            paddleAngle: 0,
+            primaryColor: '#eab308',
+            forkColor: '#6366f1',
+            paddleColor: '#a5b4fc',
+            label: 'BOT'
+          });
+        }
+
+        // 7. Player 2-Wheel Car (Sky-blue wide chassis with red forks & yellow paddle)
+        drawRobot(ctx, {
+          x: state.x,
+          y: state.y,
+          angle: state.angle,
+          leftWheelPhase: state.leftWheelPhase,
+          rightWheelPhase: state.rightWheelPhase,
+          isFalling: state.isFalling,
+          fallProgress: state.fallProgress,
+          paddleAngle: state.paddleSwingAngle,
+          primaryColor: '#7dd3fc',
+          forkColor: '#ef4444',
+          paddleColor: '#facc15',
+          label: 'CAR'
+        });
+
+        ctx.restore();
+        ctx.restore();
+      }
+
+      // Main Animation Loop
+      var lastTime = 0;
+      function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        var dt = Math.min(0.05, Math.max(0.001, (timestamp - lastTime) / 1000));
+        lastTime = timestamp;
+
+        try {
+          updatePhysics(dt);
+          render();
+        } catch (err) {
+          // Recover cleanly on any transient frame error
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      // Immediate Startup Sequence
+      resizeCanvas();
+      render();
+      requestAnimationFrame(function (ts) {
+        resizeCanvas();
+        render();
+        loop(ts);
+      });
+    })();
+  </script>
+</body>
+</html>
